@@ -11,3 +11,9 @@ README.md
 *.swo
 Dockerfile
 .dockerignore
+test-service.ts
+test-service.js
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
