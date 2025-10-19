@@ -24,10 +24,33 @@ npm install
 ### Run in Development Mode
 
 ```bash
+# Run with default service name
 npm run dev
+
+# Or specify a service name
+SERVICE_NAME=service1 npm run dev
+SERVICE_NAME=service2 npm run dev
+SERVICE_NAME=service3 npm run dev
 ```
 
 The service will start on port 3000.
+
+### Test the Service Locally
+
+```bash
+# In one terminal - start the service
+SERVICE_NAME=service1 npm run dev
+
+# In another terminal - run tests
+npm test
+```
+
+The test will simulate the complete Step Functions workflow:
+
+1. Call the service as service1 (first in chain)
+2. Call the service as service2 (middle in chain)
+3. Call the service as service3 (final in chain)
+4. Validate the payload structure matches your requirements
 
 ### Build TypeScript
 

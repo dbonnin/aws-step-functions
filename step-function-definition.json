@@ -1,11 +1,14 @@
 {
-  "Comment": "Workflow orchestration across three microservices",
+  "Comment": "Workflow orchestration across three microservices with payload chaining",
   "StartAt": "InitializeWorkflow",
   "States": {
     "InitializeWorkflow": {
       "Type": "Pass",
       "Parameters": {
-        "start.$": "$$.State.EnteredTime"
+        "startDateTime.$": "$$.State.EnteredTime",
+        "endDateTime": "",
+        "services_response": [],
+        "originalInput.$": "$"
       },
       "Next": "CallService1"
     },
@@ -35,21 +38,20 @@
           "ResultPath": "$.error"
         }
       ],
-      "ResultPath": "$.service1",
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "responseBody.$": "$.ResponseBody"
+      },
+      "ResultPath": "$.service1Result",
       "Next": "ProcessService1Response"
     },
     "ProcessService1Response": {
       "Type": "Pass",
       "Parameters": {
-        "start.$": "$.start",
-        "service1": {
-          "start.$": "$.service1.ResponseBody.timestamp.start",
-          "end.$": "$.service1.ResponseBody.timestamp.end",
-          "serviceIp.$": "$.service1.ResponseBody.serviceIp",
-          "statusCode.$": "$.service1.StatusCode",
-          "response.$": "$.service1.ResponseBody"
-        },
-        "input.$": "$"
+        "startDateTime.$": "$.service1Result.responseBody.startDateTime",
+        "endDateTime": "",
+        "services_response.$": "$.service1Result.responseBody.services_response",
+        "originalInput.$": "$.originalInput"
       },
       "Next": "CallService2"
     },
@@ -62,11 +64,7 @@
         "Headers": {
           "Content-Type": "application/json"
         },
-        "RequestBody": {
-          "previousService": "service1",
-          "service1Result.$": "$.service1.response",
-          "originalInput.$": "$.input"
-        }
+        "RequestBody.$": "$"
       },
       "Retry": [
         {
@@ -83,22 +81,20 @@
           "ResultPath": "$.error"
         }
       ],
-      "ResultPath": "$.service2",
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "responseBody.$": "$.ResponseBody"
+      },
+      "ResultPath": "$.service2Result",
       "Next": "ProcessService2Response"
     },
     "ProcessService2Response": {
       "Type": "Pass",
       "Parameters": {
-        "start.$": "$.start",
-        "service1.$": "$.service1",
-        "service2": {
-          "start.$": "$.service2.ResponseBody.timestamp.start",
-          "end.$": "$.service2.ResponseBody.timestamp.end",
-          "serviceIp.$": "$.service2.ResponseBody.serviceIp",
-          "statusCode.$": "$.service2.StatusCode",
-          "response.$": "$.service2.ResponseBody"
-        },
-        "input.$": "$.input"
+        "startDateTime.$": "$.service2Result.responseBody.startDateTime",
+        "endDateTime": "",
+        "services_response.$": "$.service2Result.responseBody.services_response",
+        "originalInput.$": "$.originalInput"
       },
       "Next": "CallService3"
     },
@@ -111,12 +107,7 @@
         "Headers": {
           "Content-Type": "application/json"
         },
-        "RequestBody": {
-          "previousServices": ["service1", "service2"],
-          "service1Result.$": "$.service1.response",
-          "service2Result.$": "$.service2.response",
-          "originalInput.$": "$.input"
-        }
+        "RequestBody.$": "$"
       },
       "Retry": [
         {
@@ -133,35 +124,34 @@
           "ResultPath": "$.error"
         }
       ],
-      "ResultPath": "$.service3",
-      "Next": "ProcessFinalResponse"
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "responseBody.$": "$.ResponseBody"
+      },
+      "ResultPath": "$.service3Result",
+      "Next": "FinalizeWorkflow"
     },
-    "ProcessFinalResponse": {
+    "FinalizeWorkflow": {
       "Type": "Pass",
       "Parameters": {
-        "start.$": "$.start",
-        "end.$": "$$.State.EnteredTime",
-        "service1.$": "$.service1",
-        "service2.$": "$.service2",
-        "service3": {
-          "start.$": "$.service3.ResponseBody.timestamp.start",
-          "end.$": "$.service3.ResponseBody.timestamp.end",
-          "serviceIp.$": "$.service3.ResponseBody.serviceIp",
-          "statusCode.$": "$.service3.StatusCode",
-          "response.$": "$.service3.ResponseBody"
-        },
-        "status": "completed"
+        "startDateTime.$": "$.service3Result.responseBody.startDateTime",
+        "endDateTime.$": "$$.State.EnteredTime",
+        "services_response.$": "$.service3Result.responseBody.services_response",
+        "status": "completed",
+        "totalProcessingTimeMs.$": "$.service3Result.responseBody.services_response[*].processingTimeMs"
       },
       "End": true
     },
     "HandleService1Error": {
       "Type": "Pass",
       "Parameters": {
-        "start.$": "$.start",
-        "end.$": "$$.State.EnteredTime",
+        "startDateTime.$": "$.startDateTime",
+        "endDateTime.$": "$$.State.EnteredTime",
+        "services_response.$": "$.services_response",
         "error": {
-          "service": "service1",
-          "details.$": "$.error"
+          "failedAt": "service1",
+          "details.$": "$.error",
+          "originalInput.$": "$.originalInput"
         },
         "status": "failed"
       },
@@ -170,12 +160,13 @@
     "HandleService2Error": {
       "Type": "Pass",
       "Parameters": {
-        "start.$": "$.start",
-        "end.$": "$$.State.EnteredTime",
-        "service1.$": "$.service1",
+        "startDateTime.$": "$.startDateTime",
+        "endDateTime.$": "$$.State.EnteredTime",
+        "services_response.$": "$.services_response",
         "error": {
-          "service": "service2",
-          "details.$": "$.error"
+          "failedAt": "service2",
+          "details.$": "$.error",
+          "originalInput.$": "$.originalInput"
         },
         "status": "failed"
       },
@@ -184,13 +175,13 @@
     "HandleService3Error": {
       "Type": "Pass",
       "Parameters": {
-        "start.$": "$.start",
-        "end.$": "$$.State.EnteredTime",
-        "service1.$": "$.service1",
-        "service2.$": "$.service2",
+        "startDateTime.$": "$.startDateTime",
+        "endDateTime.$": "$$.State.EnteredTime",
+        "services_response.$": "$.services_response",
         "error": {
-          "service": "service3",
-          "details.$": "$.error"
+          "failedAt": "service3",
+          "details.$": "$.error",
+          "originalInput.$": "$.originalInput"
         },
         "status": "failed"
       },

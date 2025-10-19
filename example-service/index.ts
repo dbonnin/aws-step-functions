@@ -28,7 +28,7 @@ app.get('/health', (req: Request, res: Response) => {
 // Main processing endpoint
 app.post('/process', async (req: Request, res: Response) => {
   try {
-    const startTime = new Date().toISOString();
+    const startDateTime = new Date().toISOString();
     const inputData = req.body;
 
     console.log('Processing request:', JSON.stringify(inputData, null, 2));
@@ -53,30 +53,40 @@ app.post('/process', async (req: Request, res: Response) => {
       if (serviceIp !== 'unknown') break;
     }
 
-    const endTime = new Date().toISOString();
+    const endDateTime = new Date().toISOString();
 
-    // Construct response
-    const response = {
-      service: SERVICE_NAME,
-      processed: true,
-      timestamp: {
-        start: startTime,
-        end: endTime
-      },
-      serviceIp,
+    // Get existing payload structure or initialize it
+    let payload = {
+      startDateTime: inputData.startDateTime || startDateTime, // Use existing or current time
+      endDateTime: '', // Will be set by Step Functions at the end
+      services_response: inputData.services_response || [] // Get existing array or initialize
+    };
+
+    // Create this service's response entry
+    const serviceResponse = {
+      service_name: SERVICE_NAME,
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+      service_ip: serviceIp,
       hostname: os.hostname(),
-      input: inputData,
-      result: {
+      processingTimeMs: new Date(endDateTime).getTime() - new Date(startDateTime).getTime(),
+      data: {
         message: `Data processed successfully by ${SERVICE_NAME}`,
-        itemCount: Array.isArray(inputData) ? inputData.length : 
-                   typeof inputData === 'object' ? Object.keys(inputData).length : 1,
-        processingTimeMs: new Date(endTime).getTime() - new Date(startTime).getTime()
+        // Only include original business data, not workflow metadata
+        originalRequestData: (() => {
+          const { startDateTime, endDateTime, services_response, ...businessData } = inputData;
+          return businessData;
+        })(),
+        previousServicesCount: payload.services_response.length
       }
     };
 
-    console.log('Response:', JSON.stringify(response, null, 2));
+    // Add this service's response to the array
+    payload.services_response.push(serviceResponse);
 
-    res.json(response);
+    console.log('Response payload:', JSON.stringify(payload, null, 2));
+
+    res.json(payload);
   } catch (error) {
     console.error('Error processing request:', error);
     res.status(500).json({

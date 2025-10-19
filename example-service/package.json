@@ -1,0 +1,33 @@
+{
+  "name": "step-functions-service",
+  "version": "1.0.0",
+  "description": "Example service for AWS Step Functions workflow",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node index.ts",
+    "test": "node test-service.js",
+    "test-ts": "ts-node test-service.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.20",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.1"
+  },
+  "keywords": [
+    "aws",
+    "step-functions",
+    "microservices",
+    "docker",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT"
+}
