@@ -1,0 +1,19 @@
+# AWS Configuration
+aws_region = "us-east-1"
+project_name = "workflow-orchestrator"
+
+# Docker Hub Credentials
+# Create a personal access token at: https://hub.docker.com/settings/security
+dockerhub_username = "your-dockerhub-username"
+dockerhub_password = "your-dockerhub-token"
+
+# Docker Images for Services
+# Build and push your images first, then update these URLs
+service1_docker_image = "your-dockerhub-username/service1:latest"
+service2_docker_image = "your-dockerhub-username/service2:latest"
+service3_docker_image = "your-dockerhub-username/service3:latest"
+
+# Optional: Customize container ports (default: 3000)
+# service1_container_port = 3000
+# service2_container_port = 3000
+# service3_container_port = 3000

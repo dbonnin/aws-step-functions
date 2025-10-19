@@ -1,0 +1,200 @@
+{
+  "Comment": "Workflow orchestration across three microservices",
+  "StartAt": "InitializeWorkflow",
+  "States": {
+    "InitializeWorkflow": {
+      "Type": "Pass",
+      "Parameters": {
+        "start.$": "$$.State.EnteredTime"
+      },
+      "Next": "CallService1"
+    },
+    "CallService1": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::http:invoke",
+      "Parameters": {
+        "ApiEndpoint": "${api_endpoint}/service1/process",
+        "Method": "POST",
+        "Headers": {
+          "Content-Type": "application/json"
+        },
+        "RequestBody.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["States.Http.StatusCode.5xx"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleService1Error",
+          "ResultPath": "$.error"
+        }
+      ],
+      "ResultPath": "$.service1",
+      "Next": "ProcessService1Response"
+    },
+    "ProcessService1Response": {
+      "Type": "Pass",
+      "Parameters": {
+        "start.$": "$.start",
+        "service1": {
+          "start.$": "$.service1.ResponseBody.timestamp.start",
+          "end.$": "$.service1.ResponseBody.timestamp.end",
+          "serviceIp.$": "$.service1.ResponseBody.serviceIp",
+          "statusCode.$": "$.service1.StatusCode",
+          "response.$": "$.service1.ResponseBody"
+        },
+        "input.$": "$"
+      },
+      "Next": "CallService2"
+    },
+    "CallService2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::http:invoke",
+      "Parameters": {
+        "ApiEndpoint": "${api_endpoint}/service2/process",
+        "Method": "POST",
+        "Headers": {
+          "Content-Type": "application/json"
+        },
+        "RequestBody": {
+          "previousService": "service1",
+          "service1Result.$": "$.service1.response",
+          "originalInput.$": "$.input"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["States.Http.StatusCode.5xx"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleService2Error",
+          "ResultPath": "$.error"
+        }
+      ],
+      "ResultPath": "$.service2",
+      "Next": "ProcessService2Response"
+    },
+    "ProcessService2Response": {
+      "Type": "Pass",
+      "Parameters": {
+        "start.$": "$.start",
+        "service1.$": "$.service1",
+        "service2": {
+          "start.$": "$.service2.ResponseBody.timestamp.start",
+          "end.$": "$.service2.ResponseBody.timestamp.end",
+          "serviceIp.$": "$.service2.ResponseBody.serviceIp",
+          "statusCode.$": "$.service2.StatusCode",
+          "response.$": "$.service2.ResponseBody"
+        },
+        "input.$": "$.input"
+      },
+      "Next": "CallService3"
+    },
+    "CallService3": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::http:invoke",
+      "Parameters": {
+        "ApiEndpoint": "${api_endpoint}/service3/process",
+        "Method": "POST",
+        "Headers": {
+          "Content-Type": "application/json"
+        },
+        "RequestBody": {
+          "previousServices": ["service1", "service2"],
+          "service1Result.$": "$.service1.response",
+          "service2Result.$": "$.service2.response",
+          "originalInput.$": "$.input"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["States.Http.StatusCode.5xx"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleService3Error",
+          "ResultPath": "$.error"
+        }
+      ],
+      "ResultPath": "$.service3",
+      "Next": "ProcessFinalResponse"
+    },
+    "ProcessFinalResponse": {
+      "Type": "Pass",
+      "Parameters": {
+        "start.$": "$.start",
+        "end.$": "$$.State.EnteredTime",
+        "service1.$": "$.service1",
+        "service2.$": "$.service2",
+        "service3": {
+          "start.$": "$.service3.ResponseBody.timestamp.start",
+          "end.$": "$.service3.ResponseBody.timestamp.end",
+          "serviceIp.$": "$.service3.ResponseBody.serviceIp",
+          "statusCode.$": "$.service3.StatusCode",
+          "response.$": "$.service3.ResponseBody"
+        },
+        "status": "completed"
+      },
+      "End": true
+    },
+    "HandleService1Error": {
+      "Type": "Pass",
+      "Parameters": {
+        "start.$": "$.start",
+        "end.$": "$$.State.EnteredTime",
+        "error": {
+          "service": "service1",
+          "details.$": "$.error"
+        },
+        "status": "failed"
+      },
+      "End": true
+    },
+    "HandleService2Error": {
+      "Type": "Pass",
+      "Parameters": {
+        "start.$": "$.start",
+        "end.$": "$$.State.EnteredTime",
+        "service1.$": "$.service1",
+        "error": {
+          "service": "service2",
+          "details.$": "$.error"
+        },
+        "status": "failed"
+      },
+      "End": true
+    },
+    "HandleService3Error": {
+      "Type": "Pass",
+      "Parameters": {
+        "start.$": "$.start",
+        "end.$": "$$.State.EnteredTime",
+        "service1.$": "$.service1",
+        "service2.$": "$.service2",
+        "error": {
+          "service": "service3",
+          "details.$": "$.error"
+        },
+        "status": "failed"
+      },
+      "End": true
+    }
+  }
+}
