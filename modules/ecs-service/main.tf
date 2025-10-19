@@ -64,14 +64,19 @@ resource "aws_lb_target_group" "service" {
 }
 
 # ALB Listener Rule
-resource "aws_lb_listener" "service" {
-  load_balancer_arn = var.alb_arn
-  port              = var.alb_listener_port
-  protocol          = "HTTP"
+resource "aws_lb_listener_rule" "service" {
+  listener_arn = var.alb_listener_arn
+  priority     = var.listener_priority
 
-  default_action {
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.service.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/${var.service_name}/*"]
+    }
   }
 }
 
@@ -95,5 +100,5 @@ resource "aws_ecs_service" "service" {
     container_port   = var.container_port
   }
 
-  depends_on = [aws_lb_listener.service]
+  depends_on = [aws_lb_listener_rule.service]
 }

@@ -62,6 +62,16 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
+# Additional security group rule for ECS tasks to receive traffic from ALB
+resource "aws_security_group_rule" "ecs_from_alb" {
+  type                     = "ingress"
+  from_port                = 3000
+  to_port                  = 3000
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb.id
+  security_group_id        = aws_security_group.ecs_tasks.id
+}
+
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
@@ -188,6 +198,23 @@ resource "aws_security_group" "alb" {
   }
 }
 
+# Main ALB Listener
+resource "aws_lb_listener" "main" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Service not found"
+      status_code  = "404"
+    }
+  }
+}
+
 # Service 1
 module "service1" {
   source = "./modules/ecs-service"
@@ -205,7 +232,8 @@ module "service1" {
   dockerhub_password_param = aws_ssm_parameter.dockerhub_password.arn
   log_group_name           = aws_cloudwatch_log_group.ecs.name
   alb_arn                  = aws_lb.main.arn
-  alb_listener_port        = 80
+  alb_listener_arn         = aws_lb_listener.main.arn
+  listener_priority        = 100
   container_port           = var.service1_container_port
   desired_count            = 1
   cpu                      = "256"
@@ -229,7 +257,8 @@ module "service2" {
   dockerhub_password_param = aws_ssm_parameter.dockerhub_password.arn
   log_group_name           = aws_cloudwatch_log_group.ecs.name
   alb_arn                  = aws_lb.main.arn
-  alb_listener_port        = 80
+  alb_listener_arn         = aws_lb_listener.main.arn
+  listener_priority        = 200
   container_port           = var.service2_container_port
   desired_count            = 1
   cpu                      = "256"
@@ -253,7 +282,8 @@ module "service3" {
   dockerhub_password_param = aws_ssm_parameter.dockerhub_password.arn
   log_group_name           = aws_cloudwatch_log_group.ecs.name
   alb_arn                  = aws_lb.main.arn
-  alb_listener_port        = 80
+  alb_listener_arn         = aws_lb_listener.main.arn
+  listener_priority        = 300
   container_port           = var.service3_container_port
   desired_count            = 1
   cpu                      = "256"
@@ -394,11 +424,16 @@ resource "aws_iam_role_policy" "step_functions" {
   })
 }
 
-# Lambda Function to Invoke Workflow
+# Lambda Function to Invoke Workflow  
 data "archive_file" "lambda" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda"
-  output_path = "${path.module}/lambda.zip"
+  type             = "zip"
+  source_dir       = "${path.module}/lambda"
+  output_path      = "${path.module}/lambda.zip"
+  output_file_mode = "0666"
+
+  depends_on = [
+    # Ensure lambda is built before archiving
+  ]
 }
 
 resource "aws_lambda_function" "workflow_invoker" {

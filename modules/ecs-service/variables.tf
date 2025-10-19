@@ -63,8 +63,13 @@ variable "alb_arn" {
   type        = string
 }
 
-variable "alb_listener_port" {
-  description = "ALB listener port"
+variable "alb_listener_arn" {
+  description = "ALB listener ARN for creating rules"
+  type        = string
+}
+
+variable "listener_priority" {
+  description = "Priority for the listener rule (100-50000)"
   type        = number
 }
 
