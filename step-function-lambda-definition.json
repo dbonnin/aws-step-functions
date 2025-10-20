@@ -1,0 +1,179 @@
+{
+  "Comment": "Workflow orchestration calling the same service three times with an incrementing counter",
+  "StartAt": "InitializeWorkflow",
+  "States": {
+    "InitializeWorkflow": {
+      "Type": "Pass",
+      "Parameters": {
+        "startDateTime.$": "$$.State.EnteredTime",
+        "endDateTime": "",
+        "services_response": [],
+        "counter": 0,
+        "originalInput.$": "$"
+      },
+      "Next": "CallService1FirstTime"
+    },
+    "CallService1FirstTime": {
+      "Type": "Pass",
+      "Parameters": {
+        "startDateTime.$": "$.startDateTime",
+        "endDateTime": "$.endDateTime",
+        "services_response.$": "$.services_response",
+        "counter": 1,
+        "originalInput.$": "$.originalInput"
+      },
+      "Next": "InvokeService1FirstTime"
+    },
+    "InvokeService1FirstTime": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${service1_lambda_arn}",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleService1Error",
+          "ResultPath": "$.error"
+        }
+      ],
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "responseBody.$": "$.Payload"
+      },
+      "ResultPath": "$.service1Result",
+      "Next": "ProcessService1FirstResponse"
+    },
+    "ProcessService1FirstResponse": {
+      "Type": "Pass",
+      "Parameters": {
+        "startDateTime.$": "$.service1Result.responseBody.startDateTime",
+        "endDateTime": "",
+        "services_response.$": "$.service1Result.responseBody.services_response",
+        "counter": 2,
+        "originalInput.$": "$.originalInput"
+      },
+      "Next": "InvokeService1SecondTime"
+    },
+    "InvokeService1SecondTime": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${service1_lambda_arn}",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleService2Error",
+          "ResultPath": "$.error"
+        }
+      ],
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "responseBody.$": "$.Payload"
+      },
+      "ResultPath": "$.service2Result",
+      "Next": "ProcessService1SecondResponse"
+    },
+    "ProcessService1SecondResponse": {
+      "Type": "Pass",
+      "Parameters": {
+        "startDateTime.$": "$.service2Result.responseBody.startDateTime",
+        "endDateTime": "",
+        "services_response.$": "$.service2Result.responseBody.services_response",
+        "counter": 3,
+        "originalInput.$": "$.originalInput"
+      },
+      "Next": "InvokeService1ThirdTime"
+    },
+    "InvokeService1ThirdTime": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${service1_lambda_arn}",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleService3Error",
+          "ResultPath": "$.error"
+        }
+      ],
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "responseBody.$": "$.Payload"
+      },
+      "ResultPath": "$.service3Result",
+      "Next": "FinalizeWorkflow"
+    },
+    "FinalizeWorkflow": {
+      "Type": "Pass",
+      "Parameters": {
+        "startDateTime.$": "$.service3Result.responseBody.startDateTime",
+        "endDateTime.$": "$$.State.EnteredTime",
+        "services_response.$": "$.service3Result.responseBody.services_response",
+        "counter.$": "$.counter",
+        "originalInput.$": "$.originalInput",
+        "workflowCompleted": true
+      },
+      "End": true
+    },
+    "HandleService1Error": {
+      "Type": "Pass",
+      "Parameters": {
+        "error": "Service 1 first call failed",
+        "errorDetails.$": "$.error",
+        "counter.$": "$.counter",
+        "originalInput.$": "$.originalInput"
+      },
+      "End": true
+    },
+    "HandleService2Error": {
+      "Type": "Pass",
+      "Parameters": {
+        "error": "Service 1 second call failed", 
+        "errorDetails.$": "$.error",
+        "counter.$": "$.counter",
+        "originalInput.$": "$.originalInput"
+      },
+      "End": true
+    },
+    "HandleService3Error": {
+      "Type": "Pass",
+      "Parameters": {
+        "error": "Service 1 third call failed",
+        "errorDetails.$": "$.error", 
+        "counter.$": "$.counter",
+        "originalInput.$": "$.originalInput"
+      },
+      "End": true
+    }
+  }
+}

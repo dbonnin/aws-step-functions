@@ -88,20 +88,6 @@ resource "aws_cloudwatch_log_group" "ecs" {
   retention_in_days = 7
 }
 
-# Docker Hub Credentials in SSM Parameter Store
-resource "aws_ssm_parameter" "dockerhub_username" {
-  name        = "/${var.project_name}/dockerhub/username"
-  description = "Docker Hub username"
-  type        = "SecureString"
-  value       = var.dockerhub_username
-}
-
-resource "aws_ssm_parameter" "dockerhub_password" {
-  name        = "/${var.project_name}/dockerhub/password"
-  description = "Docker Hub password"
-  type        = "SecureString"
-  value       = var.dockerhub_password
-}
 
 # IAM Role for ECS Task Execution
 resource "aws_iam_role" "ecs_task_execution" {
@@ -133,13 +119,11 @@ resource "aws_iam_role_policy" "ecs_task_execution_ssm" {
     Statement = [{
       Effect = "Allow"
       Action = [
-        "ssm:GetParameters",
-        "ssm:GetParameter"
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
       ]
-      Resource = [
-        aws_ssm_parameter.dockerhub_username.arn,
-        aws_ssm_parameter.dockerhub_password.arn
-      ]
+      Resource = "arn:aws:logs:*:*:*"
     }]
   })
 }
@@ -219,75 +203,69 @@ resource "aws_lb_listener" "main" {
 module "service1" {
   source = "./modules/ecs-service"
 
-  project_name             = var.project_name
-  service_name             = "service1"
-  cluster_id               = aws_ecs_cluster.main.id
-  vpc_id                   = module.vpc.vpc_id
-  subnets                  = module.vpc.private_subnets
-  security_group_id        = aws_security_group.ecs_tasks.id
-  task_execution_role_arn  = aws_iam_role.ecs_task_execution.arn
-  task_role_arn            = aws_iam_role.ecs_task.arn
-  docker_image             = var.service1_docker_image
-  dockerhub_username_param = aws_ssm_parameter.dockerhub_username.arn
-  dockerhub_password_param = aws_ssm_parameter.dockerhub_password.arn
-  log_group_name           = aws_cloudwatch_log_group.ecs.name
-  alb_arn                  = aws_lb.main.arn
-  alb_listener_arn         = aws_lb_listener.main.arn
-  listener_priority        = 100
-  container_port           = var.service1_container_port
-  desired_count            = 1
-  cpu                      = "256"
-  memory                   = "512"
+  project_name            = var.project_name
+  service_name            = "service1"
+  cluster_id              = aws_ecs_cluster.main.id
+  vpc_id                  = module.vpc.vpc_id
+  subnets                 = module.vpc.private_subnets
+  security_group_id       = aws_security_group.ecs_tasks.id
+  task_execution_role_arn = aws_iam_role.ecs_task_execution.arn
+  task_role_arn           = aws_iam_role.ecs_task.arn
+  docker_image            = var.service1_docker_image
+  log_group_name          = aws_cloudwatch_log_group.ecs.name
+  alb_arn                 = aws_lb.main.arn
+  alb_listener_arn        = aws_lb_listener.main.arn
+  listener_priority       = 100
+  container_port          = var.service1_container_port
+  desired_count           = 1
+  cpu                     = "256"
+  memory                  = "512"
 }
 
 # Service 2
 module "service2" {
   source = "./modules/ecs-service"
 
-  project_name             = var.project_name
-  service_name             = "service2"
-  cluster_id               = aws_ecs_cluster.main.id
-  vpc_id                   = module.vpc.vpc_id
-  subnets                  = module.vpc.private_subnets
-  security_group_id        = aws_security_group.ecs_tasks.id
-  task_execution_role_arn  = aws_iam_role.ecs_task_execution.arn
-  task_role_arn            = aws_iam_role.ecs_task.arn
-  docker_image             = var.service2_docker_image
-  dockerhub_username_param = aws_ssm_parameter.dockerhub_username.arn
-  dockerhub_password_param = aws_ssm_parameter.dockerhub_password.arn
-  log_group_name           = aws_cloudwatch_log_group.ecs.name
-  alb_arn                  = aws_lb.main.arn
-  alb_listener_arn         = aws_lb_listener.main.arn
-  listener_priority        = 200
-  container_port           = var.service2_container_port
-  desired_count            = 1
-  cpu                      = "256"
-  memory                   = "512"
+  project_name            = var.project_name
+  service_name            = "service2"
+  cluster_id              = aws_ecs_cluster.main.id
+  vpc_id                  = module.vpc.vpc_id
+  subnets                 = module.vpc.private_subnets
+  security_group_id       = aws_security_group.ecs_tasks.id
+  task_execution_role_arn = aws_iam_role.ecs_task_execution.arn
+  task_role_arn           = aws_iam_role.ecs_task.arn
+  docker_image            = var.service2_docker_image
+  log_group_name          = aws_cloudwatch_log_group.ecs.name
+  alb_arn                 = aws_lb.main.arn
+  alb_listener_arn        = aws_lb_listener.main.arn
+  listener_priority       = 200
+  container_port          = var.service2_container_port
+  desired_count           = 0
+  cpu                     = "256"
+  memory                  = "512"
 }
 
 # Service 3
 module "service3" {
   source = "./modules/ecs-service"
 
-  project_name             = var.project_name
-  service_name             = "service3"
-  cluster_id               = aws_ecs_cluster.main.id
-  vpc_id                   = module.vpc.vpc_id
-  subnets                  = module.vpc.private_subnets
-  security_group_id        = aws_security_group.ecs_tasks.id
-  task_execution_role_arn  = aws_iam_role.ecs_task_execution.arn
-  task_role_arn            = aws_iam_role.ecs_task.arn
-  docker_image             = var.service3_docker_image
-  dockerhub_username_param = aws_ssm_parameter.dockerhub_username.arn
-  dockerhub_password_param = aws_ssm_parameter.dockerhub_password.arn
-  log_group_name           = aws_cloudwatch_log_group.ecs.name
-  alb_arn                  = aws_lb.main.arn
-  alb_listener_arn         = aws_lb_listener.main.arn
-  listener_priority        = 300
-  container_port           = var.service3_container_port
-  desired_count            = 1
-  cpu                      = "256"
-  memory                   = "512"
+  project_name            = var.project_name
+  service_name            = "service3"
+  cluster_id              = aws_ecs_cluster.main.id
+  vpc_id                  = module.vpc.vpc_id
+  subnets                 = module.vpc.private_subnets
+  security_group_id       = aws_security_group.ecs_tasks.id
+  task_execution_role_arn = aws_iam_role.ecs_task_execution.arn
+  task_role_arn           = aws_iam_role.ecs_task.arn
+  docker_image            = var.service3_docker_image
+  log_group_name          = aws_cloudwatch_log_group.ecs.name
+  alb_arn                 = aws_lb.main.arn
+  alb_listener_arn        = aws_lb_listener.main.arn
+  listener_priority       = 300
+  container_port          = var.service3_container_port
+  desired_count           = 0
+  cpu                     = "256"
+  memory                  = "512"
 }
 
 # API Gateway
@@ -312,7 +290,7 @@ resource "aws_apigatewayv2_vpc_link" "main" {
 resource "aws_apigatewayv2_integration" "service1" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "HTTP_PROXY"
-  integration_uri  = module.service1.target_group_arn
+  integration_uri  = aws_lb_listener.main.arn
 
   integration_method = "ANY"
   connection_type    = "VPC_LINK"
@@ -328,7 +306,7 @@ resource "aws_apigatewayv2_route" "service1" {
 resource "aws_apigatewayv2_integration" "service2" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "HTTP_PROXY"
-  integration_uri  = module.service2.target_group_arn
+  integration_uri  = aws_lb_listener.main.arn
 
   integration_method = "ANY"
   connection_type    = "VPC_LINK"
@@ -344,7 +322,7 @@ resource "aws_apigatewayv2_route" "service2" {
 resource "aws_apigatewayv2_integration" "service3" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "HTTP_PROXY"
-  integration_uri  = module.service3.target_group_arn
+  integration_uri  = aws_lb_listener.main.arn
 
   integration_method = "ANY"
   connection_type    = "VPC_LINK"
@@ -357,13 +335,35 @@ resource "aws_apigatewayv2_route" "service3" {
   target    = "integrations/${aws_apigatewayv2_integration.service3.id}"
 }
 
+# API Gateway integration for workflow invoker
+resource "aws_apigatewayv2_integration" "workflow_invoker" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.workflow_invoker.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "workflow_invoker" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "POST /workflow"
+  target    = "integrations/${aws_apigatewayv2_integration.workflow_invoker.id}"
+}
+
+# Lambda permission for API Gateway to invoke workflow_invoker
+resource "aws_lambda_permission" "api_gateway_workflow_invoker" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.workflow_invoker.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
 # Step Functions
 resource "aws_sfn_state_machine" "workflow" {
   name     = "${var.project_name}-workflow"
   role_arn = aws_iam_role.step_functions.arn
 
-  definition = templatefile("${path.module}/step-function-definition.json", {
-    api_endpoint = aws_apigatewayv2_stage.main.invoke_url
+  definition = templatefile("${path.module}/step-function-lambda-definition.json", {
+    service1_lambda_arn = aws_lambda_function.service1_proxy.arn
   })
 }
 
@@ -401,24 +401,13 @@ resource "aws_iam_role_policy" "step_functions" {
       {
         Effect = "Allow"
         Action = [
-          "states:InvokeHTTPEndpoint"
+          "lambda:InvokeFunction"
         ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "events:RetrieveConnectionCredentials"
+        Resource = [
+          aws_lambda_function.service1_proxy.arn,
+          aws_lambda_function.service2_proxy.arn,
+          aws_lambda_function.service3_proxy.arn
         ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
-        ]
-        Resource = "*"
       }
     ]
   })
@@ -490,4 +479,125 @@ resource "aws_iam_role_policy" "lambda_step_functions" {
       ]
     }]
   })
+}
+
+# Create a zip file for Lambda proxy functions
+data "archive_file" "lambda_proxy" {
+  type        = "zip"
+  source_file = "lambda-service-proxy.js"
+  output_path = "lambda-service-proxy.zip"
+}
+
+# Lambda functions to proxy calls to each service
+resource "aws_lambda_function" "service1_proxy" {
+  filename      = "lambda-service-proxy.zip"
+  function_name = "${var.project_name}-service1-proxy"
+  role          = aws_iam_role.lambda_proxy.arn
+  handler       = "lambda-service-proxy.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+
+  source_code_hash = data.archive_file.lambda_proxy.output_base64sha256
+
+  environment {
+    variables = {
+      SERVICE_ENDPOINT = "http://${aws_lb.main.dns_name}/service1"
+      SERVICE_NAME     = "service1"
+    }
+  }
+
+  vpc_config {
+    subnet_ids         = module.vpc.private_subnets
+    security_group_ids = [aws_security_group.lambda_proxy.id]
+  }
+}
+
+resource "aws_lambda_function" "service2_proxy" {
+  filename      = "lambda-service-proxy.zip"
+  function_name = "${var.project_name}-service2-proxy"
+  role          = aws_iam_role.lambda_proxy.arn
+  handler       = "lambda-service-proxy.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+
+  source_code_hash = data.archive_file.lambda_proxy.output_base64sha256
+
+  environment {
+    variables = {
+      SERVICE_ENDPOINT = "http://${aws_lb.main.dns_name}/service2"
+      SERVICE_NAME     = "service2"
+    }
+  }
+
+  vpc_config {
+    subnet_ids         = module.vpc.private_subnets
+    security_group_ids = [aws_security_group.lambda_proxy.id]
+  }
+}
+
+resource "aws_lambda_function" "service3_proxy" {
+  filename      = "lambda-service-proxy.zip"
+  function_name = "${var.project_name}-service3-proxy"
+  role          = aws_iam_role.lambda_proxy.arn
+  handler       = "lambda-service-proxy.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+
+  source_code_hash = data.archive_file.lambda_proxy.output_base64sha256
+
+  environment {
+    variables = {
+      SERVICE_ENDPOINT = "http://${aws_lb.main.dns_name}/service3"
+      SERVICE_NAME     = "service3"
+    }
+  }
+
+  vpc_config {
+    subnet_ids         = module.vpc.private_subnets
+    security_group_ids = [aws_security_group.lambda_proxy.id]
+  }
+}
+
+# IAM role for Lambda proxy functions
+resource "aws_iam_role" "lambda_proxy" {
+  name = "${var.project_name}-lambda-proxy-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_proxy_basic" {
+  role       = aws_iam_role.lambda_proxy.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_proxy_vpc" {
+  role       = aws_iam_role.lambda_proxy.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+# Security group for Lambda proxy functions
+resource "aws_security_group" "lambda_proxy" {
+  name        = "${var.project_name}-lambda-proxy-sg"
+  description = "Security group for Lambda proxy functions"
+  vpc_id      = module.vpc.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-lambda-proxy-sg"
+  }
 }

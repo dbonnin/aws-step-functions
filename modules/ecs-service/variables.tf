@@ -43,16 +43,6 @@ variable "docker_image" {
   type        = string
 }
 
-variable "dockerhub_username_param" {
-  description = "SSM parameter ARN for Docker Hub username"
-  type        = string
-}
-
-variable "dockerhub_password_param" {
-  description = "SSM parameter ARN for Docker Hub password"
-  type        = string
-}
-
 variable "log_group_name" {
   description = "CloudWatch log group name"
   type        = string

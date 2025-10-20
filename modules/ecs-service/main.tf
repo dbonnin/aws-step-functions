@@ -12,10 +12,6 @@ resource "aws_ecs_task_definition" "service" {
     name  = var.service_name
     image = var.docker_image
 
-    repositoryCredentials = {
-      credentialsParameter = var.dockerhub_password_param
-    }
-
     portMappings = [{
       containerPort = var.container_port
       hostPort      = var.container_port

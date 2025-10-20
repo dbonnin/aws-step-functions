@@ -7,19 +7,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name used for resource naming"
   type        = string
-  default     = "workflow-orchestrator"
-}
-
-variable "dockerhub_username" {
-  description = "Docker Hub username"
-  type        = string
-  sensitive   = true
-}
-
-variable "dockerhub_password" {
-  description = "Docker Hub password or token"
-  type        = string
-  sensitive   = true
+  default     = "step-functions"
 }
 
 variable "service1_docker_image" {

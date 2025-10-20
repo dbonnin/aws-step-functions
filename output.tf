@@ -33,6 +33,11 @@ output "lambda_function_name" {
   value       = aws_lambda_function.workflow_invoker.function_name
 }
 
+output "workflow_endpoint" {
+  description = "API Gateway endpoint to trigger the Step Functions workflow"
+  value       = "${aws_apigatewayv2_stage.main.invoke_url}workflow"
+}
+
 output "alb_dns_name" {
   description = "DNS name of the Application Load Balancer"
   value       = aws_lb.main.dns_name
